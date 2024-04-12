@@ -5,6 +5,7 @@ Arquitectura de sistemas
 Comandos para poder ejercutar el proyecto
 antes que nada tener instalado lo siguiente para que funcione...
 
+- pip install virtualenv 
 - pip install fastapi[all]
 - pip install sqlalchemy
 - pip install mysql
