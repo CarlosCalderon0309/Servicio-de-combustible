@@ -1,6 +1,7 @@
 # Servicio-de-combustible
 Arquitectura de sistemas
 
+Dicho proyecto se esta trabajando con fastapi
 
 Comandos para poder ejercutar el proyecto
 antes que nada tener instalado lo siguiente para que funcione...
