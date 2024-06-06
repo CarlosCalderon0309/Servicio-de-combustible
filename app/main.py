@@ -1,5 +1,4 @@
 import os
-import hashlib
 from typing import List
 from fastapi import Form
 from datetime import date
@@ -7,12 +6,10 @@ from . import models, schemas
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from fastapi.params import Depends
-from fastapi.responses import HTMLResponse
 from .Conexion import SessionLocal, engine
 from fastapi import FastAPI, Form, Request
 from fastapi.templating import Jinja2Templates  
 from starlette.responses import RedirectResponse
-from fastapi.security import OAuth2PasswordRequestForm
 import requests
 
 
@@ -189,7 +186,7 @@ def recibir_pago(
             cantidad=venta_data['cantidad'], 
             id_combustible=id_combustible, 
             id_dispensador=id_dispensador, 
-            id_empleado=id_empleado
+            id_empleado=id_empleado,
         )
         db.add(new_venta)
         db.commit()
@@ -197,3 +194,321 @@ def recibir_pago(
         return new_venta
     else:
         raise HTTPException(status_code=response.status_code, detail='Error al obtener los datos de la venta')
+    
+#actualizar datos
+@app.put('/actualizar_combustible/{id_combustible}')
+def actualizar_combustible(
+    id_combustible: int,
+    nombre: str = Form(None),
+    tipo: str = Form(None),
+    octanaje: float = Form(None),
+    db: Session = Depends(get_db)
+):
+    combustible = db.query(models.Combustible).filter(models.Combustible.id_combustible == id_combustible).first()
+    if not combustible:
+        raise HTTPException(status_code=404, detail="Combustible no encontrado")
+    if nombre:
+        combustible.nombre = nombre
+    if tipo:
+        combustible.tipo = tipo
+    if octanaje:
+        combustible.octanaje = octanaje
+    db.commit()
+    db.refresh(combustible)
+    return combustible
+
+@app.put('/actualizar_tanque/{id_tanque}')
+def actualizar_tanque(
+    id_tanque: int,
+    capacidad: float = Form(None),
+    nivel_actual: float = Form(None),
+    id_combustible: int = Form(None),
+    db: Session = Depends(get_db)
+):
+    tanque = db.query(models.Tanque).filter(models.Tanque.id_tanque == id_tanque).first()
+    if not tanque:
+        raise HTTPException(status_code=404, detail="Tanque no encontrado")
+    if capacidad:
+        tanque.capacidad = capacidad
+    if nivel_actual:
+        tanque.nivel_actual = nivel_actual
+    if id_combustible:
+        tanque.id_combustible = id_combustible
+    db.commit()
+    db.refresh(tanque)
+    return tanque
+
+@app.put('/actualizar_bomba/{id_bomba}')
+def actualizar_bomba(
+    id_bomba: int,
+    numero: int = Form(None),
+    estado: str = Form(None),
+    id_tanque: int = Form(None),
+    db: Session = Depends(get_db)
+):
+    bomba = db.query(models.Bomba).filter(models.Bomba.id_bomba == id_bomba).first()
+    if not bomba:
+        raise HTTPException(status_code=404, detail="Bomba no encontrada")
+    if numero:
+        bomba.numero = numero
+    if estado:
+        bomba.estado = estado
+    if id_tanque:
+        bomba.id_tanque = id_tanque
+    db.commit()
+    db.refresh(bomba)
+    return bomba
+
+@app.put('/actualizar_dispensador/{id_dispensador}')
+def actualizar_dispensador(
+    id_dispensador: int,
+    numero: int = Form(None),
+    id_bomba: int = Form(None),
+    db: Session = Depends(get_db)
+):
+    dispensador = db.query(models.Dispensador).filter(models.Dispensador.id_dispensador == id_dispensador).first()
+    if not dispensador:
+        raise HTTPException(status_code=404, detail="Dispensador no encontrado")
+    if numero:
+        dispensador.numero = numero
+    if id_bomba:
+        dispensador.id_bomba = id_bomba
+    db.commit()
+    db.refresh(dispensador)
+    return dispensador
+
+@app.put('/actualizar_empleado/{id_empleado}')
+def actualizar_empleado(
+    id_empleado: int,
+    nombre: str = Form(None),
+    apellido: str = Form(None),
+    puesto: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    empleado = db.query(models.Empleado).filter(models.Empleado.id_empleado == id_empleado).first()
+    if not empleado:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+    if nombre:
+        empleado.nombre = nombre
+    if apellido:
+        empleado.apellido = apellido
+    if puesto:
+        empleado.puesto = puesto
+    db.commit()
+    db.refresh(empleado)
+    return empleado
+
+@app.put('/actualizar_venta/{id_venta}')
+def actualizar_venta(
+    id_venta: int,
+    fecha: date = Form(None),
+    cantidad: float = Form(None),
+    id_combustible: int = Form(None),
+    id_dispensador: int = Form(None),
+    id_empleado: int = Form(None),
+    db: Session = Depends(get_db)
+):
+    venta = db.query(models.Venta).filter(models.Venta.id_venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    if fecha:
+        venta.fecha = fecha
+    if cantidad:
+        venta.cantidad = cantidad
+    if id_combustible:
+        venta.id_combustible = id_combustible
+    if id_dispensador:
+        venta.id_dispensador = id_dispensador
+    if id_empleado:
+        venta.id_empleado = id_empleado
+    db.commit()
+    db.refresh(venta)
+    return venta
+
+@app.put('/actualizar_mantenimiento/{id_mantenimiento}')
+def actualizar_mantenimiento(
+    id_mantenimiento: int,
+    fecha: date = Form(None),
+    descripcion: str = Form(None),
+    id_bomba: int = Form(None),
+    id_empleado: int = Form(None),
+    db: Session = Depends(get_db)
+):
+    mantenimiento = db.query(models.Mantenimiento).filter(models.Mantenimiento.id_mantenimiento == id_mantenimiento).first()
+    if not mantenimiento:
+        raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+    if fecha:
+        mantenimiento.fecha = fecha
+    if descripcion:
+        mantenimiento.descripcion = descripcion
+    if id_bomba:
+        mantenimiento.id_bomba = id_bomba
+    if id_empleado:
+        mantenimiento.id_empleado = id_empleado
+    db.commit()
+    db.refresh(mantenimiento)
+    return mantenimiento
+
+#eliminar datos
+@app.delete('/eliminar_combustible/{id_combustible}')
+def eliminar_combustible(id_combustible: int, db: Session = Depends(get_db)):
+    combustible = db.query(models.Combustible).filter(models.Combustible.id_combustible == id_combustible).first()
+    if not combustible:
+        raise HTTPException(status_code=404, detail="Combustible no encontrado")
+    db.delete(combustible)
+    db.commit()
+    return combustible
+
+@app.delete('/eliminar_tanque/{id_tanque}')
+def eliminar_tanque(id_tanque: int, db: Session = Depends(get_db)):
+    tanque = db.query(models.Tanque).filter(models.Tanque.id_tanque == id_tanque).first()
+    if not tanque:
+        raise HTTPException(status_code=404, detail="Tanque no encontrado")
+    db.delete(tanque)
+    db.commit()
+    return tanque
+
+@app.delete('/eliminar_bomba/{id_bomba}')
+def eliminar_bomba(id_bomba: int, db: Session = Depends(get_db)):
+    bomba = db.query(models.Bomba).filter(models.Bomba.id_bomba == id_bomba).first()
+    if not bomba:
+        raise HTTPException(status_code=404, detail="Bomba no encontrada")
+    db.delete(bomba)
+    db.commit()
+    return bomba
+
+@app.delete('/eliminar_dispensador/{id_dispensador}')
+def eliminar_dispensador(id_dispensador: int, db: Session = Depends(get_db)):
+    dispensador = db.query(models.Dispensador).filter(models.Dispensador.id_dispensador == id_dispensador).first()
+    if not dispensador:
+        raise HTTPException(status_code=404, detail="Dispensador no encontrado")
+    db.delete(dispensador)
+    db.commit()
+    return dispensador
+
+@app.delete('/eliminar_empleado/{id_empleado}')
+def eliminar_empleado(id_empleado: int, db: Session = Depends(get_db)):
+    empleado = db.query(models.Empleado).filter(models.Empleado.id_empleado == id_empleado).first()
+    if not empleado:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+    db.delete(empleado)
+    db.commit()
+    return empleado
+
+@app.delete('/eliminar_venta/{id_venta}')
+def eliminar_venta(id_venta: int, db: Session = Depends(get_db)):
+    venta = db.query(models.Venta).filter(models.Venta.id_venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    db.delete(venta)
+    db.commit()
+    return venta
+
+@app.delete('/eliminar_mantenimiento/{id_mantenimiento}')
+def eliminar_mantenimiento(id_mantenimiento: int, db: Session = Depends(get_db)):
+    mantenimiento = db.query(models.Mantenimiento).filter(models.Mantenimiento.id_mantenimiento == id_mantenimiento).first()
+    if not mantenimiento:
+        raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+    db.delete(mantenimiento)
+    db.commit()
+    return mantenimiento
+
+#peticiones para recibir un solo dato de la base de datos
+@app.get('/mostrar_combustible/{id_combustible}', response_model=schemas.Datos_combustible)
+def get_combustible(id_combustible: int, db: Session = Depends(get_db)):
+    combustible = db.query(models.Combustible).filter(models.Combustible.id_combustible == id_combustible).first()
+    if not combustible:
+        raise HTTPException(status_code=404, detail="Combustible no encontrado")
+    return combustible
+
+@app.get('/mostrar_tanque/{id_tanque}', response_model=schemas.Datos_tanque)
+def get_tanque(id_tanque: int, db: Session = Depends(get_db)):
+    tanque = db.query(models.Tanque).filter(models.Tanque.id_tanque == id_tanque).first()
+    if not tanque:
+        raise HTTPException(status_code=404, detail="Tanque no encontrado")
+    return tanque
+
+@app.get('/mostrar_bomba/{id_bomba}', response_model=schemas.Datos_bomba)
+def get_bomba(id_bomba: int, db: Session = Depends(get_db)):
+    bomba = db.query(models.Bomba).filter(models.Bomba.id_bomba == id_bomba).first()
+    if not bomba:
+        raise HTTPException(status_code=404, detail="Bomba no encontrada")
+    return bomba
+
+@app.get('/mostrar_dispensador/{id_dispensador}', response_model=schemas.Datos_dispensador)
+def get_dispensador(id_dispensador: int, db: Session = Depends(get_db)):
+    dispensador = db.query(models.Dispensador).filter(models.Dispensador.id_dispensador == id_dispensador).first()
+    if not dispensador:
+        raise HTTPException(status_code=404, detail="Dispensador no encontrado")
+    return dispensador
+
+@app.get('/mostrar_empleado/{id_empleado}', response_model=schemas.Datos_empleado)
+def get_empleado(id_empleado: int, db: Session = Depends(get_db)):
+    empleado = db.query(models.Empleado).filter(models.Empleado.id_empleado == id_empleado).first()
+    if not empleado:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+    return empleado
+
+@app.get('/mostrar_venta/{id_venta}', response_model=schemas.Datos_venta)
+def get_venta(id_venta: int, db: Session = Depends(get_db)):
+    venta = db.query(models.Venta).filter(models.Venta.id_venta == id_venta).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    return venta
+
+@app.get('/mostrar_mantenimiento/{id_mantenimiento}', response_model=schemas.Datos_mantenimiento)
+def get_mantenimiento(id_mantenimiento: int, db: Session = Depends(get_db)):
+    mantenimiento = db.query(models.Mantenimiento).filter(models.Mantenimiento.id_mantenimiento == id_mantenimiento).first()
+    if not mantenimiento:
+        raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+    return mantenimiento
+
+#peticiones para recibir datos de la base de datos por nombre
+# @app.get('/buscar_combustible/{nombre}', response_model=List[schemas.Datos_combustible])
+# def buscar_combustible(nombre: str, db: Session = Depends(get_db)):
+#     combustible = db.query(models.Combustible).filter(models.Combustible.nombre == nombre).all()
+#     if not combustible:
+#         raise HTTPException(status_code=404, detail="Combustible no encontrado")
+#     return combustible
+
+# @app.get('/buscar_tanque/{capacidad}', response_model=List[schemas.Datos_tanque])
+# def buscar_tanque(capacidad: float, db: Session = Depends(get_db)):
+#     tanque = db.query(models.Tanque).filter(models.Tanque.capacidad == capacidad).all()
+#     if not tanque:
+#         raise HTTPException(status_code=404, detail="Tanque no encontrado")
+#     return tanque
+
+# @app.get('/buscar_bomba/{numero}', response_model=List[schemas.Datos_bomba])
+# def buscar_bomba(numero: int, db: Session = Depends(get_db)):
+#     bomba = db.query(models.Bomba).filter(models.Bomba.numero == numero).all()
+#     if not bomba:
+#         raise HTTPException(status_code=404, detail="Bomba no encontrada")
+#     return bomba
+
+# @app.get('/buscar_dispensador/{numero}', response_model=List[schemas.Datos_dispensador])
+# def buscar_dispensador(numero: int, db: Session = Depends(get_db)):
+#     dispensador = db.query(models.Dispensador).filter(models.Dispensador.numero == numero).all()
+#     if not dispensador:
+#         raise HTTPException(status_code=404, detail="Dispensador no encontrado")
+#     return dispensador
+
+# @app.get('/buscar_empleado/{nombre}', response_model=List[schemas.Datos_empleado])
+# def buscar_empleado(nombre: str, db: Session = Depends(get_db)):
+#     empleado = db.query(models.Empleado).filter(models.Empleado.nombre == nombre).all()
+#     if not empleado:
+#         raise HTTPException(status_code=404, detail="Empleado no encontrado")
+#     return empleado
+
+# @app.get('/buscar_venta/{fecha}', response_model=List[schemas.Datos_venta])
+# def buscar_venta(fecha: date, db: Session = Depends(get_db)):
+#     venta = db.query(models.Venta).filter(models.Venta.fecha == fecha).all()
+#     if not venta:
+#         raise HTTPException(status_code=404, detail="Venta no encontrada")
+#     return venta
+
+# @app.get('/buscar_mantenimiento/{fecha}', response_model=List[schemas.Datos_mantenimiento])
+# def buscar_mantenimiento(fecha: date, db: Session = Depends(get_db)):
+#     mantenimiento = db.query(models.Mantenimiento).filter(models.Mantenimiento.fecha == fecha).all()
+#     if not mantenimiento:
+#         raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+#     return mantenimiento
