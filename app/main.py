@@ -25,7 +25,7 @@ def get_db():
         yield db
     finally:
         db.close()
-        
+    
 @app.get('/')
 def inicio():
     return RedirectResponse(url='/docs/')
@@ -74,12 +74,23 @@ def crear_combustible(
     tipo: str = Form(...),
     octanaje: float = Form(...),
     db: Session = Depends(get_db)
-):
+):  
+    combustible = db.query(models.Combustible).filter(models.Combustible.nombre == nombre).first()
+
+    if combustible:
+        raise HTTPException(status_code=400, detail="El combustible ya existe")
+    
+    # Check if there are already 3 combustibles in the database
+    if db.query(models.Combustible).count() >= 3:
+        raise HTTPException(status_code=400, detail="No se pueden agregar más de 3 combustibles")
+    
     new_combustible = models.Combustible(nombre=nombre, tipo=tipo, octanaje=octanaje)
     db.add(new_combustible)
     db.commit()
     db.refresh(new_combustible)
-    return new_combustible
+    return {
+        "combustible_creado": new_combustible
+    }
 
 @app.post('/crear_tanque/')
 def crear_tanque(
@@ -87,12 +98,24 @@ def crear_tanque(
     nivel_actual: float = Form(...),
     id_combustible: int = Form(...),
     db: Session = Depends(get_db)
-):
+):        
+    combustible = db.query(models.Combustible).filter(models.Combustible.id_combustible == id_combustible).first()
+    if not combustible:
+        raise HTTPException(status_code=404, detail="Combustible no encontrado")
+    
+    existing_tanque = db.query(models.Tanque).filter(models.Tanque.id_combustible == id_combustible).first()
+    if existing_tanque:
+        raise HTTPException(status_code=400, detail=f"Tanque ya existe con el combustible {combustible.nombre}")
+    
     new_tanque = models.Tanque(capacidad=capacidad, nivel_actual=nivel_actual, id_combustible=id_combustible)
     db.add(new_tanque)
     db.commit()
     db.refresh(new_tanque)
-    return new_tanque
+    
+    return {
+        "nombre_combustible": combustible.nombre,
+        "tanque_creado": new_tanque
+    }
 
 @app.post('/crear_bomba/')
 def crear_bomba(
@@ -101,11 +124,18 @@ def crear_bomba(
     id_tanque: int = Form(...),
     db: Session = Depends(get_db)
 ):
+    # Check if the bomba with the given numero already exists
+    existing_bomba = db.query(models.Bomba).filter(models.Bomba.numero == numero).first()
+    if existing_bomba:
+        raise HTTPException(status_code=400, detail="La bomba con el numero indicado ya existe")
+    
     new_bomba = models.Bomba(numero=numero, estado=estado, id_tanque=id_tanque)
     db.add(new_bomba)
     db.commit()
     db.refresh(new_bomba)
-    return new_bomba
+    return {
+        "bomba_creada": new_bomba
+    }
 
 @app.post('/crear_dispensador/')
 def crear_dispensador(
@@ -113,11 +143,17 @@ def crear_dispensador(
     id_bomba: int = Form(...),
     db: Session = Depends(get_db)
 ):
+    existing_dispensador = db.query(models.Dispensador).filter(models.Dispensador.id_bomba == id_bomba).first()
+    if existing_dispensador:
+        raise HTTPException(status_code=400, detail="El dispensador ya existe con la bomba indicada")
+    
     new_dispensador = models.Dispensador(numero=numero, id_bomba=id_bomba)
     db.add(new_dispensador)
     db.commit()
     db.refresh(new_dispensador)
-    return new_dispensador
+    return {
+        "dispensador_creado": new_dispensador
+    }
 
 #crear para mantenimiento
 @app.post('/mantenimiento/')
@@ -160,12 +196,18 @@ def crear_empleado(
     response = requests.get('http://localhost:5002/empleados')  #cambiar cuando nos den la verdadera api
     if response.status_code == 200:
         empleado_data = response.json()
+        # Verificar si el empleado ya existe en la base de datos
+        existing_empleado = db.query(models.Empleado).filter(models.Empleado.nombre == empleado_data['nombre'], models.Empleado.apellido == empleado_data['apellido']).first()
+        if existing_empleado:
+            raise HTTPException(status_code=400, detail='El empleado ya existe en la base de datos')
         # Crear el objeto de empleado en la base de datos
         new_empleado = models.Empleado(nombre=empleado_data['nombre'], apellido=empleado_data['apellido'], puesto=empleado_data['puesto'])
         db.add(new_empleado)
         db.commit()
         db.refresh(new_empleado)
-        return new_empleado
+        return {
+            "empleado_creado": new_empleado
+        }
     else:
         raise HTTPException(status_code=response.status_code, detail='Error al obtener los datos del empleado')
     
@@ -174,12 +216,19 @@ def recibir_pago(
     id_combustible: int = Form(...),
     id_dispensador: int =  Form(...),
     id_empleado: int = Form(...),
+    id_tanque: int = Form(...),
     db: Session = Depends(get_db)
 ):
     # Hacer una solicitud a la API externa para obtener los datos de la venta
     response = requests.get('http://localhost:5002/ventas')
     if response.status_code == 200:
         venta_data = response.json()
+        # Calcular el total en litros
+        cantidad_litros = venta_data['cantidad'] / 3.78541 #ver esto
+        # Actualizar el nivel actual del tanque
+        tanque = db.query(models.Tanque).filter(models.Tanque.id_tanque == id_tanque).first()
+        tanque.nivel_actual -= cantidad_litros
+        db.commit()
         # Crear el objeto de venta en la base de datos
         new_venta = models.Venta(
             fecha=venta_data['fecha'], 
