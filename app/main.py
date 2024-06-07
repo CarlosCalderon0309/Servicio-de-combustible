@@ -512,52 +512,53 @@ def get_mantenimiento(id_mantenimiento: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
     return mantenimiento
 
-#peticiones para recibir datos de la base de datos por nombre
-# @app.get('/buscar_combustible/{nombre}', response_model=List[schemas.Datos_combustible])
-# def buscar_combustible(nombre: str, db: Session = Depends(get_db)):
-#     combustible = db.query(models.Combustible).filter(models.Combustible.nombre == nombre).all()
-#     if not combustible:
-#         raise HTTPException(status_code=404, detail="Combustible no encontrado")
-#     return combustible
+# peticiones para recibir datos de la base de datos por nombre
+@app.get('/buscar_combustible/{nombre}', response_model=List[schemas.Datos_combustible])
+def buscar_combustible(nombre: str, db: Session = Depends(get_db)):
+    combustible = db.query(models.Combustible).filter(models.Combustible.nombre == nombre).all()
+    if not combustible:
+        raise HTTPException(status_code=404, detail="Combustible no encontrado")
+    return combustible
 
-# @app.get('/buscar_tanque/{capacidad}', response_model=List[schemas.Datos_tanque])
-# def buscar_tanque(capacidad: float, db: Session = Depends(get_db)):
-#     tanque = db.query(models.Tanque).filter(models.Tanque.capacidad == capacidad).all()
-#     if not tanque:
-#         raise HTTPException(status_code=404, detail="Tanque no encontrado")
-#     return tanque
+@app.get('/buscar_tanque/{capacidad}', response_model=List[schemas.Datos_tanque])
+def buscar_tanque(capacidad: float, db: Session = Depends(get_db)):
+    tanque = db.query(models.Tanque).filter(models.Tanque.capacidad == capacidad).all()
+    if not tanque:
+        raise HTTPException(status_code=404, detail="Tanque no encontrado")
+    return tanque
 
-# @app.get('/buscar_bomba/{numero}', response_model=List[schemas.Datos_bomba])
-# def buscar_bomba(numero: int, db: Session = Depends(get_db)):
-#     bomba = db.query(models.Bomba).filter(models.Bomba.numero == numero).all()
-#     if not bomba:
-#         raise HTTPException(status_code=404, detail="Bomba no encontrada")
-#     return bomba
+@app.get('/buscar_bomba/{numero}', response_model=List[schemas.Datos_bomba])
+def buscar_bomba(numero: int, db: Session = Depends(get_db)):
+    bomba = db.query(models.Bomba).filter(models.Bomba.numero == numero).all()
+    if not bomba:
+        raise HTTPException(status_code=404, detail="Bomba no encontrada")
+    return bomba
 
-# @app.get('/buscar_dispensador/{numero}', response_model=List[schemas.Datos_dispensador])
-# def buscar_dispensador(numero: int, db: Session = Depends(get_db)):
-#     dispensador = db.query(models.Dispensador).filter(models.Dispensador.numero == numero).all()
-#     if not dispensador:
-#         raise HTTPException(status_code=404, detail="Dispensador no encontrado")
-#     return dispensador
+@app.get('/buscar_dispensador/{numero}', response_model=List[schemas.Datos_dispensador])
+def buscar_dispensador(numero: int, db: Session = Depends(get_db)):
+    dispensador = db.query(models.Dispensador).filter(models.Dispensador.numero == numero).all()
+    if not dispensador:
+        raise HTTPException(status_code=404, detail="Dispensador no encontrado")
+    return dispensador
 
-# @app.get('/buscar_empleado/{nombre}', response_model=List[schemas.Datos_empleado])
-# def buscar_empleado(nombre: str, db: Session = Depends(get_db)):
-#     empleado = db.query(models.Empleado).filter(models.Empleado.nombre == nombre).all()
-#     if not empleado:
-#         raise HTTPException(status_code=404, detail="Empleado no encontrado")
-#     return empleado
+@app.get('/buscar_empleado/{nombre}', response_model=List[schemas.Datos_empleado])
+def buscar_empleado(nombre: str, db: Session = Depends(get_db)):
+    empleado = db.query(models.Empleado).filter(models.Empleado.nombre == nombre).all()
+    if not empleado:
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+    return empleado
 
-# @app.get('/buscar_venta/{fecha}', response_model=List[schemas.Datos_venta])
-# def buscar_venta(fecha: date, db: Session = Depends(get_db)):
-#     venta = db.query(models.Venta).filter(models.Venta.fecha == fecha).all()
-#     if not venta:
-#         raise HTTPException(status_code=404, detail="Venta no encontrada")
-#     return venta
+@app.get('/buscar_venta/{fecha}', response_model=List[schemas.Datos_venta])
+def buscar_venta(fecha: date, db: Session = Depends(get_db)):
+    venta = db.query(models.Venta).filter(models.Venta.fecha == fecha).all()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    return venta
 
-# @app.get('/buscar_mantenimiento/{fecha}', response_model=List[schemas.Datos_mantenimiento])
-# def buscar_mantenimiento(fecha: date, db: Session = Depends(get_db)):
-#     mantenimiento = db.query(models.Mantenimiento).filter(models.Mantenimiento.fecha == fecha).all()
-#     if not mantenimiento:
-#         raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
-#     return mantenimiento
+@app.get('/buscar_mantenimiento/{fecha}', response_model=List[schemas.Datos_mantenimiento])
+def buscar_mantenimiento(fecha: date, db: Session = Depends(get_db)):
+    mantenimiento = db.query(models.Mantenimiento).filter(models.Mantenimiento.fecha == fecha).all()
+    if not mantenimiento:
+        raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+    return mantenimiento
+
