@@ -1,5 +1,6 @@
 import os
 import serial
+import time
 from typing import List
 from fastapi import Form
 from datetime import date
@@ -35,56 +36,39 @@ def inicio():
 @app.get('/mostar_datos_combustibles/', response_model=List[schemas.Datos_combustible])
 def get_combustibles(db: Session = Depends(get_db)):
     combustibles = db.query(models.Combustible).all()
-    return {
-        "combustibles": combustibles
-    
-    }
+    return combustibles
 
 @app.get('/mostar_datos_tanques/', response_model=List[schemas.Datos_tanque])
 def get_tanques(db: Session = Depends(get_db)):
     tanques = db.query(models.Tanque).all()
-    return {
-        "tanques": tanques
-    
-    }
+    return tanques
 
 @app.get('/mostar_datos_bombas/', response_model=List[schemas.Datos_bomba])
 def get_bombas(db: Session = Depends(get_db)):
     bombas = db.query(models.Bomba).all()
-    return {
-        "bombas": bombas
-    
-    
-    }
+    return  bombas
 
 @app.get('/mostar_datos_dispensadores/', response_model=List[schemas.Datos_dispensador])
 def get_dispensadores(db: Session = Depends(get_db)):
     dispensadores = db.query(models.Dispensador).all()
-    return {
-        "dispensadores": dispensadores
-    }
+    return  dispensadores
+
 
 @app.get('/mostar_datos_empleados/', response_model=List[schemas.Datos_empleado])
 def get_empleados(db: Session = Depends(get_db)):
     empleados = db.query(models.Empleado).all()
-    return {
-        "empleados": empleados
-    }
+    return  empleados
+
 
 @app.get('/mostar_datos_ventas/', response_model=List[schemas.Datos_venta])
 def get_ventas(db: Session = Depends(get_db)):
     ventas = db.query(models.Venta).all()
-    return {
-        "ventas": ventas
-    }
+    return ventas
 
 @app.get('/mostar_datos_mantenimientos/', response_model=List[schemas.Datos_mantenimiento])
 def get_mantenimientos(db: Session = Depends(get_db)):
     mantenimientos = db.query(models.Mantenimiento).all()
-    return {
-        "mantenimientos": mantenimientos
-    
-    }
+    return mantenimientos
 
 
 #crer datos de nuestras tablas fuertes
@@ -243,11 +227,9 @@ def recibir_pago(
     try:
         response = requests.get('http://localhost:5002/ventas')
         response.raise_for_status()
+        venta_data = response.json()
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Error al comunicarse con la API externa: {e}")
-
-    try:
-        venta_data = response.json()
     except ValueError as e:
         raise HTTPException(status_code=500, detail=f"Error al decodificar la respuesta JSON: {e}")
 
@@ -261,11 +243,15 @@ def recibir_pago(
     except (KeyError, ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=f"Error al procesar la cantidad de venta: {e}")
 
-    # Actualizar el nivel actual del tanque
+    # Verificar si hay suficiente combustible en el tanque
     tanque = db.query(models.Tanque).filter(models.Tanque.id_tanque == id_tanque).first()
     if tanque is None:
         raise HTTPException(status_code=404, detail="Tanque no encontrado")
     
+    if tanque.nivel_actual < cantidad_litros:
+        raise HTTPException(status_code=400, detail="Gasolina insuficiente para despachar")
+    
+    # Actualizar el nivel actual del tanque
     tanque.nivel_actual -= cantidad_litros
     db.commit()
 
@@ -277,9 +263,21 @@ def recibir_pago(
         id_dispensador=id_dispensador, 
         id_empleado=id_empleado,
     )
+    
     db.add(new_venta)
     db.commit()
     db.refresh(new_venta)
+
+    comando = 'R '  # Comando para indicar que la venta fue exitosa
+
+    # Conectar al puerto serial del Arduino
+    arduino = serial.Serial('COM8', 9600, timeout=1)
+    time.sleep(2)
+
+    # Enviar el comando al Arduino
+    arduino.write(comando.encode())
+
+
 
     return {
         "venta_creada": new_venta
@@ -583,3 +581,45 @@ def get_mantenimiento(id_mantenimiento: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
     return mantenimiento
 
+#Obtener los datos de la tanque por el id
+@app.get('/tanque_arduino/{id_tanque}', response_model=schemas.Datos_tanque1)
+def get_tanque(id_tanque: int, db: Session = Depends(get_db)):
+    tanque = db.query(models.Tanque).filter(models.Tanque.id_tanque == id_tanque).first()
+    if not tanque:
+        raise HTTPException(status_code=404, detail="Tanque no encontrado")
+    
+    capacidad = tanque.capacidad
+    nivel_actual = tanque.nivel_actual
+
+    # Calcular el porcentaje de capacidad actual del tanque
+    porcentaje_capacidad = (nivel_actual / capacidad) * 100
+
+    # Determinar el comando a enviar al Arduino según el porcentaje de capacidad
+    if porcentaje_capacidad <= 100 and  porcentaje_capacidad >= 76:
+        comando = 'L' 
+    elif porcentaje_capacidad <= 75 and porcentaje_capacidad >= 50:
+        comando = 'M'
+    elif porcentaje_capacidad <= 49 and porcentaje_capacidad >= 26:
+        comando = 'N'
+    elif porcentaje_capacidad <= 25 and porcentaje_capacidad >= 10:
+        comando = 'O'
+    elif porcentaje_capacidad <= 9 and porcentaje_capacidad >= 0:
+        comando = 'P'
+    else:
+        comando = 'Q' # Error
+        raise HTTPException(status_code=400, detail="No hay combustible en el tanque")
+    
+
+    # Conectar al puerto serial del Arduino
+    arduino = serial.Serial('COM8', 9600, timeout=1)
+    time.sleep(2)
+
+    # Enviar el comando al Arduino
+    arduino.write(comando.encode())
+
+    return {
+        "id_tanque": tanque.id_tanque,
+        "capacidad": tanque.capacidad,
+        "nivel_actual": tanque.nivel_actual,
+        "id_combustible": tanque.id_combustible
+    }
