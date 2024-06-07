@@ -126,3 +126,74 @@ class crear_mantenimiento(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+#mostrar los datos sin el optional
+class Datos_combustible1(BaseModel):
+    id_combustible: int
+    nombre: str
+    tipo: str
+    octanaje: float
+    
+    class Config: 
+        from_attributes = True
+
+class Datos_tanque1(BaseModel):
+    id_tanque: int
+    capacidad: float
+    nivel_actual: float
+    id_combustible: int
+    
+    class Config: 
+        from_attributes = True
+
+class Datos_bomba1(BaseModel):
+    id_bomba: int
+    numero: int
+    estado: str
+    id_tanque: int
+    
+    class Config: 
+        from_attributes = True
+
+class Datos_dispensador1(BaseModel):
+    id_dispensador: int
+    numero: int
+    id_bomba: int
+    
+    class Config: 
+        from_attributes = True
+
+class Datos_empleado1(BaseModel):
+    id_empleado: int
+    nombre: str
+    apellido: str
+    puesto: str
+    
+    class Config: 
+        from_attributes = True
+
+class Datos_venta1(BaseModel):
+
+    id_venta: int
+    fecha: str
+    cantidad: float
+    id_combustible: int
+    id_dispensador: int
+    id_empleado: int
+    
+    class Config: 
+        from_attributes = True
+
+class Datos_mantenimiento1(BaseModel):
+
+    id_mantenimiento: int
+    fecha: str
+    descripcion: str
+    id_bomba: int
+    id_empleado: int
+    
+    class Config: 
+        from_attributes = True
+
+
